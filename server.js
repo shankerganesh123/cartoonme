@@ -2,8 +2,6 @@ const https = require('https');
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.REPLICATE_TOKEN;
 
-const MODEL_VERSION = "35cea9c3164d9fb7fbd48b51503eabdb39c9d04fdaef9a68f368bed8087ec5f9";
-
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -35,16 +33,6 @@ function makeRequest(method, path, data, callback) {
   req.end();
 }
 
-// Map our style names to what the model accepts
-const STYLE_MAP = {
-  '3d_animation': '3D',
-  'anime':        'Emoji',
-  'disney_charactor': '3D',
-  'pixel_art':    'Pixels',
-  'sketch':       'Clay',
-  'watercolor':   'Toy'
-};
-
 const server = require('http').createServer(function(req, res) {
 
   if (req.method === 'OPTIONS') {
@@ -65,16 +53,13 @@ const server = require('http').createServer(function(req, res) {
     req.on('end', function() {
       try {
         const data = JSON.parse(body);
-        const mappedStyle = STYLE_MAP[data.style] || '3D';
 
+        // Use catacolabs/cartoonify — true cartoon transformation
+        // preserves face features with strong cartoon effect
         const payload = {
-          version: MODEL_VERSION,
+          version: "a674d7f5d95cd8b47d5f3e44a03e6a06ae3ad585898edf28d5ba2ebe2a8e51b2",
           input: {
-            image: data.image,
-            style: mappedStyle,
-            prompt: 'a cartoon character',
-            negative_prompt: 'ugly, blurry, bad anatomy',
-            num_outputs: 1
+            image: data.image
           }
         };
 
@@ -115,5 +100,5 @@ const server = require('http').createServer(function(req, res) {
 });
 
 server.listen(PORT, function() {
-  console.log('CartoonMe server running on port ' + PORT);
+  console.log('CartoonMe API running on port ' + PORT);
 });
