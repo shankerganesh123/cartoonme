@@ -33,6 +33,15 @@ function makeRequest(method, path, data, callback) {
   req.end();
 }
 
+const STYLE_MAP = {
+  '3d_animation': '3D',
+  'anime': 'Emoji',
+  'disney_charactor': '3D',
+  'pixel_art': 'Pixels',
+  'sketch': 'Clay',
+  'watercolor': 'Toy'
+};
+
 const server = require('http').createServer(function(req, res) {
 
   if (req.method === 'OPTIONS') {
@@ -53,17 +62,21 @@ const server = require('http').createServer(function(req, res) {
     req.on('end', function() {
       try {
         const data = JSON.parse(body);
+        const mappedStyle = STYLE_MAP[data.style] || '3D';
 
-        // Use catacolabs/cartoonify — true cartoon transformation
-        // preserves face features with strong cartoon effect
+        // Use model name directly — no version hash needed
+        // This calls the latest version automatically
         const payload = {
-          version: "a674d7f5d95cd8b47d5f3e44a03e6a06ae3ad585898edf28d5ba2ebe2a8e51b2",
           input: {
-            image: data.image
+            image: data.image,
+            style: mappedStyle,
+            prompt: 'a cartoon character',
+            negative_prompt: 'ugly, blurry, bad anatomy',
+            num_outputs: 1
           }
         };
 
-        makeRequest('POST', '/v1/predictions', payload, function(err, result) {
+        makeRequest('POST', '/v1/models/fofr/face-to-many/predictions', payload, function(err, result) {
           if (err) {
             res.writeHead(500, corsHeaders());
             res.end(JSON.stringify({ error: err.message }));
