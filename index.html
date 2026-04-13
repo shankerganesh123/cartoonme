@@ -87,7 +87,7 @@ input[type=file]{display:none}
 </div>
 
 <script>
-var TOKEN="r8_TfEkcNPKe2m6kDTva53rfQ9OyiGvzmS1kB4Bl";
+var TOKEN="TOKEN NUMBER";
 var API="https://api.replicate.com/v1/predictions";
 var MODEL="35d5f7a9d7b48b44c81ef2d8f7f34c96af6fb9c7";
 var PROXY="https://api.allorigins.win/raw?url=";
@@ -150,8 +150,8 @@ function pick(card,name,prompt){
 }
 async function generate(){
   if(!file||!style)return;
-  if(TOKEN==="r8_TfEkcNPKe2m6kDTva53rfQ9OyiGvzmS1kB4Bl"){
-    alert("Please replace r8_TfEkcNPKe2m6kDTva53rfQ9OyiGvzmS1kB4Bl with your real Replicate token in the code!");
+  if(TOKEN==="TOKEN NUMBER"){
+    alert("Please replace TOKEN NUMBER with your real Replicate token in the code!");
     return;
   }
   go('loadingScreen');
