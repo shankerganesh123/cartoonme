@@ -2,7 +2,6 @@ const https = require('https');
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.REPLICATE_TOKEN;
 
-// Latest working version of fofr/face-to-many
 const MODEL_VERSION = "35cea9c3164d9fb7fbd48b51503eabdb39c9d04fdaef9a68f368bed8087ec5f9";
 
 function corsHeaders() {
@@ -36,6 +35,16 @@ function makeRequest(method, path, data, callback) {
   req.end();
 }
 
+// Map our style names to what the model accepts
+const STYLE_MAP = {
+  '3d_animation': '3D',
+  'anime':        'Emoji',
+  'disney_charactor': '3D',
+  'pixel_art':    'Pixels',
+  'sketch':       'Clay',
+  'watercolor':   'Toy'
+};
+
 const server = require('http').createServer(function(req, res) {
 
   if (req.method === 'OPTIONS') {
@@ -56,16 +65,19 @@ const server = require('http').createServer(function(req, res) {
     req.on('end', function() {
       try {
         const data = JSON.parse(body);
+        const mappedStyle = STYLE_MAP[data.style] || '3D';
+
         const payload = {
           version: MODEL_VERSION,
           input: {
             image: data.image,
-            style: data.style,
-            prompt: data.styleName + ' style, high quality cartoon character',
+            style: mappedStyle,
+            prompt: 'a cartoon character',
             negative_prompt: 'ugly, blurry, bad anatomy',
             num_outputs: 1
           }
         };
+
         makeRequest('POST', '/v1/predictions', payload, function(err, result) {
           if (err) {
             res.writeHead(500, corsHeaders());
@@ -75,6 +87,7 @@ const server = require('http').createServer(function(req, res) {
           res.writeHead(200, corsHeaders());
           res.end(result);
         });
+
       } catch(e) {
         res.writeHead(400, corsHeaders());
         res.end(JSON.stringify({ error: e.message }));
