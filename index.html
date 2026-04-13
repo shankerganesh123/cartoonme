@@ -9,14 +9,9 @@
 body{font-family:sans-serif;background:#f5f5f5;min-height:100vh}
 .screen{display:none;min-height:100vh;padding:24px 20px;flex-direction:column;align-items:center}
 .screen.active{display:flex}
-#setupScreen{background:linear-gradient(160deg,#667eea,#764ba2);justify-content:center;gap:16px}
 #homeScreen{background:linear-gradient(160deg,#667eea,#764ba2);justify-content:center;gap:20px}
 .logo{font-size:38px;font-weight:800;color:#fff}
 .tagline{font-size:15px;color:rgba(255,255,255,0.85);margin-top:-12px}
-.setup-box{background:rgba(255,255,255,0.15);border-radius:16px;padding:20px;width:100%;max-width:320px}
-.setup-label{font-size:13px;color:rgba(255,255,255,0.9);margin-bottom:8px;font-weight:600}
-.setup-input{width:100%;padding:12px;border-radius:10px;border:none;font-size:14px;background:#fff;color:#333}
-.setup-hint{font-size:11px;color:rgba(255,255,255,0.7);margin-top:6px;line-height:1.5}
 .btn{width:100%;max-width:320px;padding:16px;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;border:none;margin-top:4px}
 .btn-white{background:#fff;color:#667eea}
 .btn-clear{background:rgba(255,255,255,0.2);color:#fff;border:2px solid rgba(255,255,255,0.5)}
@@ -51,25 +46,12 @@ input[type=file]{display:none}
 </head>
 <body>
 
-<div class="screen active" id="setupScreen">
-  <div class="logo">🎨 CartoonMe</div>
-  <div class="tagline">Turn your photo into a cartoon</div>
-  <div class="setup-box">
-    <div class="setup-label">Enter your Replicate API Token</div>
-    <input class="setup-input" type="password" id="tokenInput" placeholder="r8_xxxxxxxxxxxxxxxx"/>
-    <div class="setup-hint">Get your free token at replicate.com/account/api-tokens — saved only on your device.</div>
-  </div>
-  <button class="btn btn-white" onclick="saveToken()">Start CartoonMe →</button>
-  <button class="btn btn-clear" onclick="window.open('https://replicate.com/account/api-tokens','_blank')">Get free token →</button>
-</div>
-
-<div class="screen" id="homeScreen">
+<div class="screen active" id="homeScreen">
   <div class="logo">🎨 CartoonMe</div>
   <div class="tagline">Turn your photo into a cartoon</div>
   <button class="btn btn-white" onclick="openCamera()">📷 Take Selfie</button>
   <button class="btn btn-clear" onclick="document.getElementById('fi').click()">⬆️ Upload Photo</button>
   <input type="file" id="fi" accept="image/*" onchange="handleFile(event)"/>
-  <button class="btn btn-clear" onclick="resetToken()" style="margin-top:16px;font-size:13px;padding:10px">⚙️ Change Token</button>
 </div>
 
 <div class="screen" id="styleScreen">
@@ -105,68 +87,16 @@ input[type=file]{display:none}
 </div>
 
 <script>
-var API="https://api.replicate.com/v1/predictions";
-var MODEL="35d5f7a9d7b48b44c81ef2d8f7f34c96af6fb9c7";
+// Backend URL — your Render server
+var BACKEND = "https://cartoonme.onrender.com";
 var file=null,dataUrl=null,cartoonUrl=null,style=null,stylePrompt=null;
-var TOKEN=localStorage.getItem('replicate_token')||'';
-if(TOKEN) go('homeScreen');
-
-// Try multiple proxies one by one
-var PROXIES=[
-  "https://api.allorigins.win/raw?url=",
-  "https://corsproxy.io/?url=",
-  "https://proxy.cors.sh/",
-  "https://crossorigin.me/"
-];
-
-async function fetchProxy(url, options){
-  for(var i=0;i<PROXIES.length;i++){
-    try{
-      var proxyUrl = PROXIES[i]+encodeURIComponent(url);
-      var res = await fetch(proxyUrl, options);
-      if(res.status===200||res.status===201){
-        return res;
-      }
-    }catch(e){
-      console.log('Proxy '+i+' failed: '+e.message);
-    }
-  }
-  // Last resort — try direct (works if CORS is allowed)
-  try{
-    return await fetch(url, options);
-  }catch(e){
-    throw new Error('All connection methods failed. Please try again in a moment.');
-  }
-}
-
-function saveToken(){
-  var t=document.getElementById('tokenInput').value.trim();
-  if(!t||!t.startsWith('r8_')){
-    alert('Please enter a valid token — it must start with r8_\n\nGet yours free at replicate.com/account/api-tokens');
-    return;
-  }
-  TOKEN=t;
-  localStorage.setItem('replicate_token',t);
-  go('homeScreen');
-}
-
-function resetToken(){
-  localStorage.removeItem('replicate_token');
-  TOKEN='';
-  go('setupScreen');
-}
 
 function go(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
 }
-
-function setStep(msg){
-  var el=document.getElementById('stepMsg');
-  if(el)el.textContent=msg;
-}
-
+function setStep(msg){var el=document.getElementById('stepMsg');if(el)el.textContent=msg;}
 function showErr(msg){
   go('styleScreen');
   var o=document.querySelector('.err');if(o)o.remove();
@@ -174,13 +104,11 @@ function showErr(msg){
   d.className='err';d.innerHTML='❌ '+msg;
   document.getElementById('styleScreen').appendChild(d);
 }
-
 function openCamera(){
   var i=document.createElement('input');
   i.type='file';i.accept='image/*';i.capture='user';
   i.onchange=handleFile;i.click();
 }
-
 function compress(f,cb){
   var r=new FileReader();
   r.onload=function(e){
@@ -198,7 +126,6 @@ function compress(f,cb){
   };
   r.readAsDataURL(f);
 }
-
 function handleFile(e){
   var f=e.target.files[0];if(!f)return;
   file=f;
@@ -213,71 +140,48 @@ function handleFile(e){
     go('styleScreen');
   });
 }
-
 function pick(card,name,prompt){
   document.querySelectorAll('.scard').forEach(function(c){c.classList.remove('selected')});
   card.classList.add('selected');
   style=name;stylePrompt=prompt;
   document.getElementById('genBtn').disabled=false;
 }
-
 async function generate(){
   if(!file||!style)return;
   go('loadingScreen');
   try{
     setStep('Sending image to AI...');
-    var res=await fetchProxy(API,{
+    var res=await fetch(BACKEND+'/generate',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':'Token '+TOKEN
-      },
-      body:JSON.stringify({
-        version:MODEL,
-        input:{
-          image:dataUrl,
-          style:stylePrompt,
-          prompt:'cartoon character, '+style+' style, high quality',
-          negative_prompt:'ugly, blurry, bad anatomy',
-          num_outputs:1
-        }
-      })
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image:dataUrl,style:stylePrompt,styleName:style})
     });
     var p=await res.json();
-    if(!p.id) throw new Error(p.detail||p.error||'Failed to start. Check your token and billing on replicate.com');
+    if(!p.id) throw new Error(p.detail||p.error||'Failed to start. Check billing on replicate.com');
     setStep('AI is drawing your cartoon...');
     var result=await poll(p.id);
     cartoonUrl=result;
     document.getElementById('cartImg').src=cartoonUrl;
     go('resultScreen');
   }catch(err){
-    showErr(err.message+'<br><br><small>Please try again in a moment</small>');
+    showErr(err.message+'<br><br><small>Please try again</small>');
   }
 }
-
 async function poll(id){
   for(var i=0;i<60;i++){
     await new Promise(function(r){setTimeout(r,4000)});
-    try{
-      var res=await fetchProxy(API+'/'+id,{
-        headers:{'Authorization':'Token '+TOKEN}
-      });
-      var d=await res.json();
-      if(d.status==='succeeded') return Array.isArray(d.output)?d.output[0]:d.output;
-      if(d.status==='failed') throw new Error(d.error||'Generation failed. Please try again.');
-    }catch(e){
-      if(e.message.indexOf('failed')>-1) throw e;
-    }
+    var res=await fetch(BACKEND+'/status/'+id);
+    var d=await res.json();
+    if(d.status==='succeeded') return Array.isArray(d.output)?d.output[0]:d.output;
+    if(d.status==='failed') throw new Error(d.error||'Generation failed');
   }
   throw new Error('Timed out — please try again');
 }
-
 function download(){
   if(!cartoonUrl)return;
   var a=document.createElement('a');
   a.href=cartoonUrl;a.download='cartoonme.png';a.target='_blank';a.click();
 }
-
 function whatsapp(){
   window.open('https://wa.me/?text='+encodeURIComponent('Check my cartoon! 🎨 '+cartoonUrl),'_blank');
 }
