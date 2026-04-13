@@ -1,1 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CartoonMe</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:sans-serif;background:#f5f5f5;min-height:100vh}
+.screen{display:none;min-height:100vh;padding:24px 20px;flex-direction:column;align-items:center}
+.screen.active{display:flex}
+#homeScreen{background:linear-gradient(160deg,#667eea,#764ba2);justify-content:center;gap:20px}
+.logo{font-size:40px;font-weight:800;color:#fff}
+.tagline{font-size:15px;color:rgba(255,255,255,0.85);margin-top:-12px}
+.btn{width:100%;max-width:320px;padding:16px;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;border:none;margin-top:4px}
+.btn-white{background:#fff;color:#667eea}
+.btn-clear{background:rgba(255,255,255,0.2);color:#fff;border:2px solid rgba(255,255,255,0.5)}
+#styleScreen{background:#f5f5f5;gap:14px;padding-top:32px}
+.photo-prev{width:100%;max-width:320px;height:180px;border-radius:16px;object-fit:cover}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:320px}
+.scard{background:#fff;border-radius:14px;padding:14px;cursor:pointer;border:2px solid transparent}
+.scard.selected{border-color:#667eea;background:#f0f0ff}
+.scard-icon{font-size:26px}
+.scard-name{font-size:14px;font-weight:600;margin-top:4px}
+.scard-desc{font-size:11px;color:#999}
+.gen-btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;width:100%;max-width:320px;padding:16px;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;border:none}
+.gen-btn:disabled{opacity:0.4;cursor:not-allowed}
+#loadingScreen{background:linear-gradient(160deg,#667eea,#764ba2);justify-content:center;gap:16px}
+.spinner{width:60px;height:60px;border:5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-title{font-size:22px;font-weight:700;color:#fff}
+.load-sub{font-size:14px;color:rgba(255,255,255,0.8);text-align:center;max-width:260px}
+.load-step{font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px}
+#resultScreen{background:#f5f5f5;gap:14px;padding-top:32px}
+.result-title{font-size:20px;font-weight:700;color:#1a1a1a}
+.pair{display:flex;gap:10px;width:100%;max-width:320px}
+.pair-item{flex:1;text-align:center}
+.pair-item img{width:100%;border-radius:12px;aspect-ratio:1;object-fit:cover}
+.pair-item p{font-size:12px;color:#888;margin-top:4px}
+.dl-btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;width:100%;max-width:320px;padding:15px;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;border:none}
+.wa-btn{background:#25D366;color:#fff;width:100%;max-width:320px;padding:15px;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;border:none}
+.out-btn{background:#fff;color:#667eea;width:100%;max-width:320px;padding:13px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;border:2px solid #667eea}
+.err{background:#fff0f0;border:1px solid #ffcccc;border-radius:12px;padding:14px;width:100%;max-width:320px;color:#cc0000;font-size:13px;text-align:center;line-height:1.7;margin-top:8px}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
 
+<div class="screen active" id="homeScreen">
+  <div class="logo">🎨 CartoonMe</div>
+  <div class="tagline">Turn your photo into a cartoon</div>
+  <button class="btn btn-white" onclick="openCamera()">📷 Take Selfie</button>
+  <button class="btn btn-clear" onclick="document.getElementById('fi').click()">⬆️ Upload Photo</button>
+  <input type="file" id="fi" accept="image/*" onchange="handleFile(event)"/>
+</div>
+
+<div class="screen" id="styleScreen">
+  <img id="prev" class="photo-prev" src="" alt="preview"/>
+  <div class="grid">
+    <div class="scard" onclick="pick(this,'cartoon','3d_animation')"><div class="scard-icon">🎨</div><div class="scard-name">Cartoon</div><div class="scard-desc">Bold vivid colors</div></div>
+    <div class="scard" onclick="pick(this,'anime','anime')"><div class="scard-icon">✨</div><div class="scard-name">Anime</div><div class="scard-desc">Japanese style</div></div>
+    <div class="scard" onclick="pick(this,'disney','disney_charactor')"><div class="scard-icon">🏰</div><div class="scard-name">Disney</div><div class="scard-desc">Magical look</div></div>
+    <div class="scard" onclick="pick(this,'pixel','pixel_art')"><div class="scard-icon">👾</div><div class="scard-name">Pixel Art</div><div class="scard-desc">Retro 8-bit</div></div>
+    <div class="scard" onclick="pick(this,'sketch','sketch')"><div class="scard-icon">✏️</div><div class="scard-name">Sketch</div><div class="scard-desc">Pencil drawing</div></div>
+    <div class="scard" onclick="pick(this,'watercolor','watercolor')"><div class="scard-icon">🎭</div><div class="scard-name">Watercolor</div><div class="scard-desc">Soft painterly</div></div>
+  </div>
+  <button class="gen-btn" id="genBtn" onclick="generate()" disabled>✨ Generate Cartoon</button>
+</div>
+
+<div class="screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="load-title">Creating your cartoon...</div>
+  <div class="load-sub">Please wait 20–40 seconds</div>
+  <div class="load-step" id="stepMsg">Starting...</div>
+</div>
+
+<div class="screen" id="resultScreen">
+  <div class="result-title">Your cartoon is ready!</div>
+  <div class="pair">
+    <div class="pair-item"><img id="origImg" src="" alt="original"/><p>Original</p></div>
+    <div class="pair-item"><img id="cartImg" src="" alt="cartoon"/><p>Cartoon</p></div>
+  </div>
+  <button class="dl-btn" onclick="download()">Download PNG</button>
+  <button class="wa-btn" onclick="whatsapp()">Share on WhatsApp</button>
+  <button class="out-btn" onclick="go('styleScreen')">Try Another Style</button>
+  <button class="out-btn" onclick="go('homeScreen')">New Photo</button>
+</div>
+
+<script>
+var TOKEN="r8_RzdAQZmIiufa7mGBgPDTGjkKitvXkKr1W5Ato";
+var API="https://api.replicate.com/v1/predictions";
+var MODEL="35d5f7a9d7b48b44c81ef2d8f7f34c96af6fb9c7";
+var PROXY="https://api.allorigins.win/raw?url=";
+var file=null,dataUrl=null,cartoonUrl=null,style=null,stylePrompt=null;
+
+function go(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function setStep(msg){var el=document.getElementById('stepMsg');if(el)el.textContent=msg;}
+function showErr(msg){
+  go('styleScreen');
+  var o=document.querySelector('.err');if(o)o.remove();
+  var d=document.createElement('div');
+  d.className='err';d.innerHTML='❌ '+msg;
+  document.getElementById('styleScreen').appendChild(d);
+}
+function openCamera(){
+  var i=document.createElement('input');
+  i.type='file';i.accept='image/*';i.capture='user';
+  i.onchange=handleFile;i.click();
+}
+function compress(f,cb){
+  var r=new FileReader();
+  r.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var MAX=512,w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
+      else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      var c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',0.6));
+    };
+    img.src=e.target.result;
+  };
+  r.readAsDataURL(f);
+}
+function handleFile(e){
+  var f=e.target.files[0];if(!f)return;
+  file=f;
+  compress(f,function(c){
+    dataUrl=c;
+    document.getElementById('prev').src=c;
+    document.getElementById('origImg').src=c;
+    document.querySelectorAll('.scard').forEach(function(s){s.classList.remove('selected')});
+    document.getElementById('genBtn').disabled=true;
+    style=null;
+    var err=document.querySelector('.err');if(err)err.remove();
+    go('styleScreen');
+  });
+}
+function pick(card,name,prompt){
+  document.querySelectorAll('.scard').forEach(function(c){c.classList.remove('selected')});
+  card.classList.add('selected');
+  style=name;stylePrompt=prompt;
+  document.getElementById('genBtn').disabled=false;
+}
+async function generate(){
+  if(!file||!style)return;
+  if(TOKEN==="r8_RzdAQZmIiufa7mGBgPDTGjkKitvXkKr1W5Ato"){
+    alert("Please replace r8_RzdAQZmIiufa7mGBgPDTGjkKitvXkKr1W5Ato with your real Replicate token in the code!");
+    return;
+  }
+  go('loadingScreen');
+  try{
+    setStep('Sending image to AI...');
+    var res=await fetch(PROXY+encodeURIComponent(API),{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Token '+TOKEN
+      },
+      body:JSON.stringify({
+        version:MODEL,
+        input:{
+          image:dataUrl,
+          style:stylePrompt,
+          prompt:'cartoon character, '+style+' style, high quality',
+          negative_prompt:'ugly, blurry, bad anatomy',
+          num_outputs:1
+        }
+      })
+    });
+    var p=await res.json();
+    if(!p.id) throw new Error(p.detail||p.error||'Failed to start. Check token and billing.');
+    setStep('AI is drawing your cartoon...');
+    var result=await poll(p.id);
+    cartoonUrl=result;
+    document.getElementById('cartImg').src=cartoonUrl;
+    go('resultScreen');
+  }catch(err){
+    showErr(err.message+'<br><br><small>Check token and billing on replicate.com</small>');
+  }
+}
+async function poll(id){
+  for(var i=0;i<60;i++){
+    await new Promise(function(r){setTimeout(r,4000)});
+    var res=await fetch(PROXY+encodeURIComponent(API+'/'+id),{
+      headers:{'Authorization':'Token '+TOKEN}
+    });
+    var d=await res.json();
+    if(d.status==='succeeded') return Array.isArray(d.output)?d.output[0]:d.output;
+    if(d.status==='failed') throw new Error(d.error||'Generation failed');
+  }
+  throw new Error('Timed out — please try again');
+}
+function download(){
+  if(!cartoonUrl)return;
+  var a=document.createElement('a');
+  a.href=cartoonUrl;a.download='cartoonme.png';a.target='_blank';a.click();
+}
+function whatsapp(){
+  window.open('https://wa.me/?text='+encodeURIComponent('Check my cartoon! 🎨 '+cartoonUrl),'_blank');
+}
+</script>
+</body>
+</html>
