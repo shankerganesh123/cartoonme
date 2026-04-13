@@ -9,9 +9,14 @@
 body{font-family:sans-serif;background:#f5f5f5;min-height:100vh}
 .screen{display:none;min-height:100vh;padding:24px 20px;flex-direction:column;align-items:center}
 .screen.active{display:flex}
+#setupScreen{background:linear-gradient(160deg,#667eea,#764ba2);justify-content:center;gap:16px}
 #homeScreen{background:linear-gradient(160deg,#667eea,#764ba2);justify-content:center;gap:20px}
-.logo{font-size:40px;font-weight:800;color:#fff}
+.logo{font-size:38px;font-weight:800;color:#fff}
 .tagline{font-size:15px;color:rgba(255,255,255,0.85);margin-top:-12px}
+.setup-box{background:rgba(255,255,255,0.15);border-radius:16px;padding:20px;width:100%;max-width:320px}
+.setup-label{font-size:13px;color:rgba(255,255,255,0.9);margin-bottom:8px;font-weight:600}
+.setup-input{width:100%;padding:12px;border-radius:10px;border:none;font-size:14px;background:#fff;color:#333}
+.setup-hint{font-size:11px;color:rgba(255,255,255,0.7);margin-top:6px;line-height:1.5}
 .btn{width:100%;max-width:320px;padding:16px;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;border:none;margin-top:4px}
 .btn-white{background:#fff;color:#667eea}
 .btn-clear{background:rgba(255,255,255,0.2);color:#fff;border:2px solid rgba(255,255,255,0.5)}
@@ -46,14 +51,30 @@ input[type=file]{display:none}
 </head>
 <body>
 
-<div class="screen active" id="homeScreen">
+<!-- SETUP SCREEN — enter token once -->
+<div class="screen active" id="setupScreen">
+  <div class="logo">🎨 CartoonMe</div>
+  <div class="tagline">Turn your photo into a cartoon</div>
+  <div class="setup-box">
+    <div class="setup-label">Enter your Replicate API Token</div>
+    <input class="setup-input" type="password" id="tokenInput" placeholder="r8_xxxxxxxxxxxxxxxx"/>
+    <div class="setup-hint">Get your free token at replicate.com/account/api-tokens — your token is saved only on your device, never shared.</div>
+  </div>
+  <button class="btn btn-white" onclick="saveToken()">Start CartoonMe →</button>
+  <button class="btn btn-clear" onclick="openLink()">Get free token at replicate.com</button>
+</div>
+
+<!-- HOME SCREEN -->
+<div class="screen" id="homeScreen">
   <div class="logo">🎨 CartoonMe</div>
   <div class="tagline">Turn your photo into a cartoon</div>
   <button class="btn btn-white" onclick="openCamera()">📷 Take Selfie</button>
   <button class="btn btn-clear" onclick="document.getElementById('fi').click()">⬆️ Upload Photo</button>
   <input type="file" id="fi" accept="image/*" onchange="handleFile(event)"/>
+  <button class="btn btn-clear" onclick="resetToken()" style="margin-top:16px;font-size:13px;padding:10px">⚙️ Change Token</button>
 </div>
 
+<!-- STYLE PICKER -->
 <div class="screen" id="styleScreen">
   <img id="prev" class="photo-prev" src="" alt="preview"/>
   <div class="grid">
@@ -67,38 +88,69 @@ input[type=file]{display:none}
   <button class="gen-btn" id="genBtn" onclick="generate()" disabled>✨ Generate Cartoon</button>
 </div>
 
+<!-- LOADING -->
 <div class="screen" id="loadingScreen">
   <div class="spinner"></div>
   <div class="load-title">Creating your cartoon...</div>
-  <div class="load-sub">Please wait 20–40 seconds</div>
+  <div class="load-sub">Please wait 20-40 seconds</div>
   <div class="load-step" id="stepMsg">Starting...</div>
 </div>
 
+<!-- RESULT -->
 <div class="screen" id="resultScreen">
-  <div class="result-title">Your cartoon is ready!</div>
+  <div class="result-title">🎉 Your cartoon is ready!</div>
   <div class="pair">
     <div class="pair-item"><img id="origImg" src="" alt="original"/><p>Original</p></div>
     <div class="pair-item"><img id="cartImg" src="" alt="cartoon"/><p>Cartoon</p></div>
   </div>
-  <button class="dl-btn" onclick="download()">Download PNG</button>
-  <button class="wa-btn" onclick="whatsapp()">Share on WhatsApp</button>
-  <button class="out-btn" onclick="go('styleScreen')">Try Another Style</button>
-  <button class="out-btn" onclick="go('homeScreen')">New Photo</button>
+  <button class="dl-btn" onclick="download()">⬇️ Download PNG</button>
+  <button class="wa-btn" onclick="whatsapp()">💬 Share on WhatsApp</button>
+  <button class="out-btn" onclick="go('styleScreen')">🎨 Try Another Style</button>
+  <button class="out-btn" onclick="go('homeScreen')">📷 New Photo</button>
 </div>
 
 <script>
-var TOKEN="TOKEN NUMBER";
 var API="https://api.replicate.com/v1/predictions";
 var MODEL="35d5f7a9d7b48b44c81ef2d8f7f34c96af6fb9c7";
 var PROXY="https://api.allorigins.win/raw?url=";
 var file=null,dataUrl=null,cartoonUrl=null,style=null,stylePrompt=null;
+
+// Load token from localStorage
+var TOKEN=localStorage.getItem('replicate_token')||'';
+if(TOKEN){go('homeScreen');}
+
+function saveToken(){
+  var t=document.getElementById('tokenInput').value.trim();
+  if(!t||!t.startsWith('r8_')){
+    alert('Please enter a valid token starting with r8_');
+    return;
+  }
+  TOKEN=t;
+  localStorage.setItem('replicate_token',t);
+  go('homeScreen');
+}
+
+function resetToken(){
+  localStorage.removeItem('replicate_token');
+  TOKEN='';
+  go('setupScreen');
+}
+
+function openLink(){
+  window.open('https://replicate.com/account/api-tokens','_blank');
+}
 
 function go(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
 }
-function setStep(msg){var el=document.getElementById('stepMsg');if(el)el.textContent=msg;}
+
+function setStep(msg){
+  var el=document.getElementById('stepMsg');
+  if(el)el.textContent=msg;
+}
+
 function showErr(msg){
   go('styleScreen');
   var o=document.querySelector('.err');if(o)o.remove();
@@ -106,11 +158,13 @@ function showErr(msg){
   d.className='err';d.innerHTML='❌ '+msg;
   document.getElementById('styleScreen').appendChild(d);
 }
+
 function openCamera(){
   var i=document.createElement('input');
   i.type='file';i.accept='image/*';i.capture='user';
   i.onchange=handleFile;i.click();
 }
+
 function compress(f,cb){
   var r=new FileReader();
   r.onload=function(e){
@@ -128,6 +182,7 @@ function compress(f,cb){
   };
   r.readAsDataURL(f);
 }
+
 function handleFile(e){
   var f=e.target.files[0];if(!f)return;
   file=f;
@@ -142,18 +197,16 @@ function handleFile(e){
     go('styleScreen');
   });
 }
+
 function pick(card,name,prompt){
   document.querySelectorAll('.scard').forEach(function(c){c.classList.remove('selected')});
   card.classList.add('selected');
   style=name;stylePrompt=prompt;
   document.getElementById('genBtn').disabled=false;
 }
+
 async function generate(){
   if(!file||!style)return;
-  if(TOKEN==="TOKEN NUMBER"){
-    alert("Please replace TOKEN NUMBER with your real Replicate token in the code!");
-    return;
-  }
   go('loadingScreen');
   try{
     setStep('Sending image to AI...');
@@ -175,7 +228,7 @@ async function generate(){
       })
     });
     var p=await res.json();
-    if(!p.id) throw new Error(p.detail||p.error||'Failed to start. Check token and billing.');
+    if(!p.id) throw new Error(p.detail||p.error||'Failed to start. Check your token and billing.');
     setStep('AI is drawing your cartoon...');
     var result=await poll(p.id);
     cartoonUrl=result;
@@ -185,6 +238,7 @@ async function generate(){
     showErr(err.message+'<br><br><small>Check token and billing on replicate.com</small>');
   }
 }
+
 async function poll(id){
   for(var i=0;i<60;i++){
     await new Promise(function(r){setTimeout(r,4000)});
@@ -197,11 +251,13 @@ async function poll(id){
   }
   throw new Error('Timed out — please try again');
 }
+
 function download(){
   if(!cartoonUrl)return;
   var a=document.createElement('a');
   a.href=cartoonUrl;a.download='cartoonme.png';a.target='_blank';a.click();
 }
+
 function whatsapp(){
   window.open('https://wa.me/?text='+encodeURIComponent('Check my cartoon! 🎨 '+cartoonUrl),'_blank');
 }
