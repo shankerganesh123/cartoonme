@@ -35,11 +35,11 @@ function makeRequest(method, path, data, callback) {
 
 const STYLE_MAP = {
   '3d_animation': '3D',
-  'anime': 'Emoji',
+  'anime':        'Emoji',
   'disney_charactor': '3D',
-  'pixel_art': 'Pixels',
-  'sketch': 'Clay',
-  'watercolor': 'Toy'
+  'pixel_art':    'Pixels',
+  'sketch':       'Clay',
+  'watercolor':   'Toy'
 };
 
 const server = require('http').createServer(function(req, res) {
@@ -64,9 +64,9 @@ const server = require('http').createServer(function(req, res) {
         const data = JSON.parse(body);
         const mappedStyle = STYLE_MAP[data.style] || '3D';
 
-        // Use model name directly — no version hash needed
-        // This calls the latest version automatically
+        // Pass model name as version — Replicate supports this format
         const payload = {
+          version: "fofr/face-to-many",
           input: {
             image: data.image,
             style: mappedStyle,
@@ -76,7 +76,7 @@ const server = require('http').createServer(function(req, res) {
           }
         };
 
-        makeRequest('POST', '/v1/models/fofr/face-to-many/predictions', payload, function(err, result) {
+        makeRequest('POST', '/v1/predictions', payload, function(err, result) {
           if (err) {
             res.writeHead(500, corsHeaders());
             res.end(JSON.stringify({ error: err.message }));
