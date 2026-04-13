@@ -51,20 +51,18 @@ input[type=file]{display:none}
 </head>
 <body>
 
-<!-- SETUP SCREEN — enter token once -->
 <div class="screen active" id="setupScreen">
   <div class="logo">🎨 CartoonMe</div>
   <div class="tagline">Turn your photo into a cartoon</div>
   <div class="setup-box">
     <div class="setup-label">Enter your Replicate API Token</div>
     <input class="setup-input" type="password" id="tokenInput" placeholder="r8_xxxxxxxxxxxxxxxx"/>
-    <div class="setup-hint">Get your free token at replicate.com/account/api-tokens — your token is saved only on your device, never shared.</div>
+    <div class="setup-hint">Get your free token at replicate.com/account/api-tokens — saved only on your device.</div>
   </div>
   <button class="btn btn-white" onclick="saveToken()">Start CartoonMe →</button>
-  <button class="btn btn-clear" onclick="openLink()">Get free token at replicate.com</button>
+  <button class="btn btn-clear" onclick="window.open('https://replicate.com/account/api-tokens','_blank')">Get free token →</button>
 </div>
 
-<!-- HOME SCREEN -->
 <div class="screen" id="homeScreen">
   <div class="logo">🎨 CartoonMe</div>
   <div class="tagline">Turn your photo into a cartoon</div>
@@ -74,7 +72,6 @@ input[type=file]{display:none}
   <button class="btn btn-clear" onclick="resetToken()" style="margin-top:16px;font-size:13px;padding:10px">⚙️ Change Token</button>
 </div>
 
-<!-- STYLE PICKER -->
 <div class="screen" id="styleScreen">
   <img id="prev" class="photo-prev" src="" alt="preview"/>
   <div class="grid">
@@ -88,7 +85,6 @@ input[type=file]{display:none}
   <button class="gen-btn" id="genBtn" onclick="generate()" disabled>✨ Generate Cartoon</button>
 </div>
 
-<!-- LOADING -->
 <div class="screen" id="loadingScreen">
   <div class="spinner"></div>
   <div class="load-title">Creating your cartoon...</div>
@@ -96,7 +92,6 @@ input[type=file]{display:none}
   <div class="load-step" id="stepMsg">Starting...</div>
 </div>
 
-<!-- RESULT -->
 <div class="screen" id="resultScreen">
   <div class="result-title">🎉 Your cartoon is ready!</div>
   <div class="pair">
@@ -112,17 +107,42 @@ input[type=file]{display:none}
 <script>
 var API="https://api.replicate.com/v1/predictions";
 var MODEL="35d5f7a9d7b48b44c81ef2d8f7f34c96af6fb9c7";
-var PROXY="https://api.allorigins.win/raw?url=";
 var file=null,dataUrl=null,cartoonUrl=null,style=null,stylePrompt=null;
-
-// Load token from localStorage
 var TOKEN=localStorage.getItem('replicate_token')||'';
-if(TOKEN){go('homeScreen');}
+if(TOKEN) go('homeScreen');
+
+// Try multiple proxies one by one
+var PROXIES=[
+  "https://api.allorigins.win/raw?url=",
+  "https://corsproxy.io/?url=",
+  "https://proxy.cors.sh/",
+  "https://crossorigin.me/"
+];
+
+async function fetchProxy(url, options){
+  for(var i=0;i<PROXIES.length;i++){
+    try{
+      var proxyUrl = PROXIES[i]+encodeURIComponent(url);
+      var res = await fetch(proxyUrl, options);
+      if(res.status===200||res.status===201){
+        return res;
+      }
+    }catch(e){
+      console.log('Proxy '+i+' failed: '+e.message);
+    }
+  }
+  // Last resort — try direct (works if CORS is allowed)
+  try{
+    return await fetch(url, options);
+  }catch(e){
+    throw new Error('All connection methods failed. Please try again in a moment.');
+  }
+}
 
 function saveToken(){
   var t=document.getElementById('tokenInput').value.trim();
   if(!t||!t.startsWith('r8_')){
-    alert('Please enter a valid token starting with r8_');
+    alert('Please enter a valid token — it must start with r8_\n\nGet yours free at replicate.com/account/api-tokens');
     return;
   }
   TOKEN=t;
@@ -134,10 +154,6 @@ function resetToken(){
   localStorage.removeItem('replicate_token');
   TOKEN='';
   go('setupScreen');
-}
-
-function openLink(){
-  window.open('https://replicate.com/account/api-tokens','_blank');
 }
 
 function go(id){
@@ -210,7 +226,7 @@ async function generate(){
   go('loadingScreen');
   try{
     setStep('Sending image to AI...');
-    var res=await fetch(PROXY+encodeURIComponent(API),{
+    var res=await fetchProxy(API,{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
@@ -228,26 +244,30 @@ async function generate(){
       })
     });
     var p=await res.json();
-    if(!p.id) throw new Error(p.detail||p.error||'Failed to start. Check your token and billing.');
+    if(!p.id) throw new Error(p.detail||p.error||'Failed to start. Check your token and billing on replicate.com');
     setStep('AI is drawing your cartoon...');
     var result=await poll(p.id);
     cartoonUrl=result;
     document.getElementById('cartImg').src=cartoonUrl;
     go('resultScreen');
   }catch(err){
-    showErr(err.message+'<br><br><small>Check token and billing on replicate.com</small>');
+    showErr(err.message+'<br><br><small>Please try again in a moment</small>');
   }
 }
 
 async function poll(id){
   for(var i=0;i<60;i++){
     await new Promise(function(r){setTimeout(r,4000)});
-    var res=await fetch(PROXY+encodeURIComponent(API+'/'+id),{
-      headers:{'Authorization':'Token '+TOKEN}
-    });
-    var d=await res.json();
-    if(d.status==='succeeded') return Array.isArray(d.output)?d.output[0]:d.output;
-    if(d.status==='failed') throw new Error(d.error||'Generation failed');
+    try{
+      var res=await fetchProxy(API+'/'+id,{
+        headers:{'Authorization':'Token '+TOKEN}
+      });
+      var d=await res.json();
+      if(d.status==='succeeded') return Array.isArray(d.output)?d.output[0]:d.output;
+      if(d.status==='failed') throw new Error(d.error||'Generation failed. Please try again.');
+    }catch(e){
+      if(e.message.indexOf('failed')>-1) throw e;
+    }
   }
   throw new Error('Timed out — please try again');
 }
