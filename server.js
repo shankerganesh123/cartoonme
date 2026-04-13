@@ -2,6 +2,8 @@ const https = require('https');
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.REPLICATE_TOKEN;
 
+const MODEL_VERSION = "35cea9c3164d9fb7fbd48b51503eabdb39c9d04fdaef9a68f368bed8087ec5f9";
+
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -33,6 +35,7 @@ function makeRequest(method, path, data, callback) {
   req.end();
 }
 
+// Map our style names to what the model accepts
 const STYLE_MAP = {
   '3d_animation': '3D',
   'anime':        'Emoji',
@@ -64,9 +67,8 @@ const server = require('http').createServer(function(req, res) {
         const data = JSON.parse(body);
         const mappedStyle = STYLE_MAP[data.style] || '3D';
 
-        // Pass model name as version — Replicate supports this format
         const payload = {
-          version: "fofr/face-to-many",
+          version: MODEL_VERSION,
           input: {
             image: data.image,
             style: mappedStyle,
@@ -113,5 +115,5 @@ const server = require('http').createServer(function(req, res) {
 });
 
 server.listen(PORT, function() {
-  console.log('CartoonMe API running on port ' + PORT);
+  console.log('CartoonMe server running on port ' + PORT);
 });
